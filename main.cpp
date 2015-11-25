@@ -27,6 +27,9 @@ double einstainMultiplication(int n)
 
     return result;
 }
+
+double evaluationFunction(int n) {
+}
 int main()
 {
     double myValues[] = {1,2,3,4};
