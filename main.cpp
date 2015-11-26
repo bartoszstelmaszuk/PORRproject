@@ -6,6 +6,7 @@
 using namespace std;
 
 int n = 2;
+int devisionConstant = 2;
 
 struct Point
 {
@@ -62,6 +63,34 @@ struct weightPoint initFunctionDomain()
     initialPoint.dimensionValues.assign(initValues, initValues+n);
 
     return initialPoint;
+
+}
+
+void devideBlock(struct weightPoint point)
+{
+    double longestDistance = 0;
+    struct Point beginFinalPoint;
+    struct Point endFinalPoint;
+
+    for (int i=0; i<2*n; i++){
+        struct Point beginPoint = point.blockCorners[i];
+        struct Point endPoint = point.blockCorners[i+1];
+
+        for (int j=0; j<2; j++)
+        {
+            double newDistance = beginPoint.coordinates[j] = endPoint.coordinates[j];
+            if(newDistance>longestDistance) {
+                longestDistance = newDistance;
+                beginFinalPoint = beginPoint;
+                endFinalPoint = endPoint;
+            }
+        }
+
+    }
+
+    struct weightPoint *newBlocks = (struct weightPoint*)malloc(devisionConstant*sizeof(struct weightPoint));
+    struct weightPoint newPoint;
+    newPoint.blockCorners = point.blockCorners;
 
 }
 int main()
