@@ -1,43 +1,83 @@
 #include <iostream>
+#include <stdlib.h>
 #include <math.h>
 #include <vector>
 
 using namespace std;
 
-vector<double> xCoordinates;
+int n = 2;
 
-double einstainSummation(int n)
+struct Point
+{
+    double *coordinates = (double *)malloc(n*sizeof(double));
+}Point;
+
+struct weightPoint
+{
+    vector<double> dimensionValues;
+    vector<struct Point> blockCorners;
+}weightPoint;
+
+double einstainSummation(struct weightPoint value)
 {
     double sum=0;
 
-    for(int i=0; i<n;i++) {
-        sum+=xCoordinates[i];
+    for(int i=0; i<value.dimensionValues.size();i++) {
+        sum+=value.dimensionValues[i];
     }
 
     return sum;
 }
 
-double einstainMultiplication(int n)
+double einstainMultiplication(struct weightPoint value)
 {
     double result=1;
 
-    for (int i=1; i<=n; i++){
-        result = result * cos(xCoordinates.at(i-1)/i);
+    for (int i=1; i<=value.dimensionValues.size(); i++){
+        result = result * cos(value.dimensionValues.at(i-1)/i);
     }
 
     return result;
 }
 
-double evaluationFunction(int n) {
+double evaluationFunction(struct weightPoint value)
+{
+    return (1/40)*einstainSummation(value)+1-einstainMultiplication(value);
+}
+
+/*double approximationFunction(vector<double> value)
+{
+    return evaluationFunction(value) - (L/2)*sqrt();
+
+}*/
+
+struct weightPoint initFunctionDomain()
+{
+    struct weightPoint initialPoint;
+
+    double *initValues = (double *)malloc(n*sizeof(double));
+    for(int i=0; i<n; i++){
+        initValues[i] = 0;
+    }
+    initialPoint.dimensionValues.assign(initValues, initValues+n);
+
+    return initialPoint;
+
 }
 int main()
 {
-    double myValues[] = {1,2,3,4};
-    xCoordinates.assign(myValues, myValues+4);
-    double result = einstainMultiplication(2);
+    struct weightPoint examplePoint;
+    double myValues[] = {0,0};
+    examplePoint.dimensionValues.assign(myValues, myValues+n);
+
+    double result = einstainMultiplication(examplePoint);
     cout << "result multiplication: " << result << endl;
-    result = einstainSummation(2);
+
+    result = einstainSummation(examplePoint);
     cout << "result summation: " << result << endl;
+
+    result = evaluationFunction(examplePoint);
+    cout << "result evaluationFunction: " << result << endl;
 
 
     return 0;
