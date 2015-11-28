@@ -1,7 +1,9 @@
 # depslib dependency file v1.0
-1448583438 source:c:\users\bartosz\desktop\porrprojekt\main.cpp
+1448735634 source:c:\users\bartosz\desktop\porrprojekt\main.cpp
 	<iostream>
 	<stdlib.h>
 	<math.h>
 	<vector>
+	<stdio.h>
+	<string.h>
 
