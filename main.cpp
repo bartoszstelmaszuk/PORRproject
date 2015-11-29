@@ -110,6 +110,13 @@ void showPoint(Point selectedPoint)
     cout << "Point y: " << selectedPoint.coordinates[1] << endl;
 }
 
+void showWeightPoint(weightPoint point)
+{
+    showBlockCorners(point);
+    for(int i=0; i<n; i++) {
+        cout << "Dimensional Value" << i <<": " << point.dimensionsValue[i] << endl;
+    }
+}
 void copy_Point(Point *p1, Point *p2)
 {
     for(int i=0; i<n; i++) {
@@ -126,14 +133,44 @@ void copy_weightPoint(weightPoint *p1, weightPoint *p2)
     }
 }
 
+void calculateDimensionValues(weightPoint *point)
+{
+    Point *beginPoint = newPoint();
+    Point *endPoint = newPoint();
+    double middlePoint;
+
+    for (int i=0; i<n; i++){
+        beginPoint = &point->blockCorners[i];
+        endPoint = &point->blockCorners[(i+1)];
+
+        for (int j=0; j<2; j++){
+            double distance1 = beginPoint->coordinates[j];
+            double distance2 = endPoint->coordinates[j];
+            double newDistance;
+            if(distance1 == distance2) {
+                newDistance = 0;
+            } else {
+                newDistance = distance2 - distance1;
+            }
+
+            middlePoint = beginPoint->coordinates[j] + newDistance/2;
+
+            if((i==j)){
+                point->dimensionsValue.push_back(middlePoint);
+            }
+        }
+    }
+    free(beginPoint);
+    free(endPoint);
+}
 vector<weightPoint *> devideBlock(weightPoint *point)
 {
     double longestDistance = 0;
-    struct Point *firstDevisionPoint = newPoint();
-    struct Point *secondDevisionPoint = newPoint();
-    struct Point *beginPoint = newPoint();
-    struct Point *endPoint = newPoint();
-    struct Point *secondPoint = newPoint();
+    Point *firstDevisionPoint = newPoint();
+    Point *secondDevisionPoint = newPoint();
+    Point *beginPoint = newPoint();
+    Point *endPoint = newPoint();
+    Point *secondPoint = newPoint();
     int longestCornerIndex = 0;
 
     for (int i=0; i<4; i++){
@@ -149,7 +186,7 @@ vector<weightPoint *> devideBlock(weightPoint *point)
             double newDistance;
             if(distance1 == distance2) {
                 newDistance = 0;
-            }else if ((distance1 <= 0 && distance2 >= 0) || (distance1 <= 0 || distance2 >= 0)){
+            }else if ((distance1 <= 0 && distance2 >= 0) || (distance1 >= 0 || distance2 <= 0)){
                 newDistance = abs(distance1) + abs(distance2);
             } else {
                 newDistance = abs(distance1 - distance2);
@@ -207,6 +244,8 @@ vector<weightPoint *> devideBlock(weightPoint *point)
         copy_Point(&(newPoint2->blockCorners[0]), secondDevisionPoint);
     }
 
+    calculateDimensionValues(newPoint);
+    calculateDimensionValues(newPoint2);
 
     vector<weightPoint *> newBlocks;
     newBlocks.push_back(newPoint);
@@ -227,19 +266,19 @@ int main()
     vector<struct Point> points;
 
     Point *point1 = newPoint();
-    point1->coordinates[0] = -20;
+    point1->coordinates[0] = -40;
     point1->coordinates[1] = -40;
     points.push_back(*point1);
     Point *point2 = newPoint();
-    point2->coordinates[0] = 20;
+    point2->coordinates[0] = 40;
     point2->coordinates[1] = -40;
     points.push_back(*point2);
     Point *point3 = newPoint();
-    point3->coordinates[0] = 20;
+    point3->coordinates[0] = 40;
     point3->coordinates[1] = 40;
     points.push_back(*point3);
     Point *point4 = newPoint();
-    point4->coordinates[0] = -20;
+    point4->coordinates[0] = -40;
     point4->coordinates[1] = 40;
     points.push_back(*point4);
 
@@ -260,9 +299,9 @@ int main()
     vector<weightPoint *> devidedBlocks;
     devidedBlocks = devideBlock(examplePoint);
 
-    showBlockCorners(*(devidedBlocks[0]));
+    showWeightPoint(*(devidedBlocks[0]));
     cout << "Second block: " << endl;
-    showBlockCorners(*(devidedBlocks[1]));
+    showWeightPoint(*(devidedBlocks[1]));
 
     return 0;
 }
