@@ -83,7 +83,6 @@ weightPoint initFunctionDomain()
 {
     weightPoint initialPoint;
 
-    cout << "--------------" << endl;
     double *initValues = (double *)malloc(n*sizeof(double));
     for(int i=0; i<n; i++){
         initValues[i] = 0;
@@ -135,22 +134,32 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     struct Point *beginPoint = newPoint();
     struct Point *endPoint = newPoint();
     struct Point *secondPoint = newPoint();
+    int longestCornerIndex = 0;
 
-    for (int i=0; i<3; i++){
+    for (int i=0; i<4; i++){
 
         copy_Point(beginPoint, &point->blockCorners[i]);
-        copy_Point(endPoint, &point->blockCorners[(i+1)%(2*n)]);
-        copy_Point(secondPoint, &point->blockCorners[(i+2)%(2*n)]);
+        copy_Point(endPoint, &point->blockCorners[(i+1)%4]);
+        copy_Point(secondPoint, &point->blockCorners[(i+2)%4]);
 
-        for (int j=0; j<n; j++)
+        for (int j=0; j<2; j++)
         {
             double distance1 = beginPoint->coordinates[j];
             double distance2 = endPoint->coordinates[j];
-            double newDistance = abs(distance1) + abs(distance2);
+            double newDistance;
+            if(distance1 == distance2) {
+                newDistance = 0;
+            }else if ((distance1 <= 0 && distance2 >= 0) || (distance1 <= 0 || distance2 >= 0)){
+                newDistance = abs(distance1) + abs(distance2);
+            } else {
+                newDistance = abs(distance1 - distance2);
+            }
+
 
             if(newDistance>longestDistance) {
 
                 longestDistance = newDistance;
+                longestCornerIndex = i;
                 copy_Point(firstDevisionPoint,endPoint);
 
                 if(firstDevisionPoint->coordinates[j] >= 0) {
@@ -184,11 +193,20 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     copy_weightPoint(newPoint, point);
     copy_weightPoint(newPoint2, point);
 
-    copy_Point(&(newPoint->blockCorners[0]), firstDevisionPoint);
-    copy_Point(&(newPoint->blockCorners[3]), secondDevisionPoint);
+    if(longestCornerIndex ==0) {
+        copy_Point(&(newPoint2->blockCorners[1]), firstDevisionPoint);
+        copy_Point(&(newPoint2->blockCorners[2]), secondDevisionPoint);
 
-    copy_Point(&(newPoint2->blockCorners[1]), firstDevisionPoint);
-    copy_Point(&(newPoint2->blockCorners[2]), secondDevisionPoint);
+        copy_Point(&(newPoint->blockCorners[0]), firstDevisionPoint);
+        copy_Point(&(newPoint->blockCorners[3]), secondDevisionPoint);
+    } else if (longestCornerIndex == 1) {
+        copy_Point(&(newPoint->blockCorners[2]), firstDevisionPoint);
+        copy_Point(&(newPoint->blockCorners[3]), secondDevisionPoint);
+
+        copy_Point(&(newPoint2->blockCorners[1]), firstDevisionPoint);
+        copy_Point(&(newPoint2->blockCorners[0]), secondDevisionPoint);
+    }
+
 
     vector<weightPoint *> newBlocks;
     newBlocks.push_back(newPoint);
@@ -209,19 +227,19 @@ int main()
     vector<struct Point> points;
 
     Point *point1 = newPoint();
-    point1->coordinates[0] = -40;
+    point1->coordinates[0] = -20;
     point1->coordinates[1] = -40;
     points.push_back(*point1);
     Point *point2 = newPoint();
-    point2->coordinates[0] = 40;
+    point2->coordinates[0] = 20;
     point2->coordinates[1] = -40;
     points.push_back(*point2);
     Point *point3 = newPoint();
-    point3->coordinates[0] = 40;
+    point3->coordinates[0] = 20;
     point3->coordinates[1] = 40;
     points.push_back(*point3);
     Point *point4 = newPoint();
-    point4->coordinates[0] = -40;
+    point4->coordinates[0] = -20;
     point4->coordinates[1] = 40;
     points.push_back(*point4);
 
@@ -243,6 +261,8 @@ int main()
     devidedBlocks = devideBlock(examplePoint);
 
     showBlockCorners(*(devidedBlocks[0]));
+    cout << "Second block: " << endl;
+    showBlockCorners(*(devidedBlocks[1]));
 
     return 0;
 }
