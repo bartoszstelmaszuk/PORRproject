@@ -38,9 +38,9 @@ Point *newPoint ()
     return retPoint;
 }
 
-struct weightPoint *newWeightPoint ()
+weightPoint *newWeightPoint ()
 {
-    weightPoint *retPoint = (weightPoint*)malloc(sizeof(weightPoint));
+    weightPoint *retPoint = (weightPoint*)malloc(10000*sizeof(weightPoint));
     if (retPoint == NULL)
         return NULL;
 
@@ -157,7 +157,12 @@ void showWeightPoint(weightPoint point)
     showElementsOfApproxFunc(point);
 }
 
-double calculateLongestSide(weightPoint *point)
+void calculateApproximationFunction(weightPoint *point)
+{
+    point->approxFunctionValue = (evaluationFunction(*point) - (1.5)*sqrt(einstainSummation(*point)));
+}
+
+void calculateLongestSide(weightPoint *point)
 {
     double longestDistance = 0;
     Point *beginPoint = newPoint();
@@ -189,7 +194,10 @@ double calculateLongestSide(weightPoint *point)
     }
     point->longestSide = longestDistance;
 
-    return longestDistance;
+    free(beginPoint);
+    free(endPoint);
+
+    calculateApproximationFunction(point);
 }
 void calculateDimensionValues(weightPoint *point)
 {
@@ -220,11 +228,13 @@ void calculateDimensionValues(weightPoint *point)
     }
     free(beginPoint);
     free(endPoint);
+
+    calculateLongestSide(point);
 }
 
-void calculateApproximationFunction(weightPoint *point)
+void calculateAttributes(weightPoint *point)
 {
-    point->approxFunctionValue = (evaluationFunction(*point) - (1.5)*sqrt(einstainSummation(*point)));
+    calculateDimensionValues(point);
 }
 
 vector<weightPoint *> devideBlock(weightPoint *point)
@@ -280,12 +290,10 @@ vector<weightPoint *> devideBlock(weightPoint *point)
 
     }
 
-
-
-    /*cout << "firstDevisionPoint " << endl;
+    cout << "firstDevisionPoint " << endl;
     showPoint(*firstDevisionPoint);
     cout << "secondDevisionPoint " << endl;
-    showPoint(*secondDevisionPoint);*/
+    showPoint(*secondDevisionPoint);
 
     weightPoint *newPoint = newWeightPoint();
     weightPoint *newPoint2 = newWeightPoint();
@@ -307,12 +315,8 @@ vector<weightPoint *> devideBlock(weightPoint *point)
         copy_Point(&(newPoint2->blockCorners[0]), secondDevisionPoint);
     }
 
-    calculateDimensionValues(newPoint);
-    calculateDimensionValues(newPoint2);
-    calculateLongestSide(newPoint);
-    calculateLongestSide(newPoint2);
-    calculateApproximationFunction(newPoint);
-    calculateApproximationFunction(newPoint2);
+    calculateAttributes(newPoint);
+    calculateAttributes(newPoint2);
 
     vector<weightPoint *> newBlocks;
     newBlocks.push_back(newPoint);
@@ -351,22 +355,41 @@ int main()
     weightPoint *examplePoint = newWeightPoint();
     memcpy(&examplePoint->blockCorners, &points, sizeof(points));
 
+    free(point1);
+    free(point2);
+    free(point3);
+    free(point4);
+
+
+    calculateAttributes(examplePoint);
+
     weightPoint *chosenPoint;
     vector<weightPoint *> approxFuncArray;
 
-    copy_weightPoint(chosenPoint, examplePoint);
+    chosenPoint = examplePoint;
+
+    showWeightPoint(*examplePoint);
 
     vector<weightPoint *> devidedBlocks;
     devidedBlocks = devideBlock(chosenPoint);
 
-    approxFuncArray.push_back(devidedBlocks[0]);
-    approxFuncArray.push_back(devidedBlocks[1]);
+    //calculateAttributes(devidedBlocks[0]);
+    //calculateAttributes(devidedBlocks[1]);
 
-    double minApproxFunction = chosenPoint->approxFunctionValue;
+    //approxFuncArray.push_back(devidedBlocks[0]);
+    //approxFuncArray.push_back(devidedBlocks[1]);
+
+    showWeightPoint(*(devidedBlocks[0]));
+
+    //double minApproxFunction = chosenPoint->approxFunctionValue;
 
     double d = 1; //punkt stopu
 
-    while (chosenPoint->longestSide > d) {
+    //devidedBlocks = devideBlock(devidedBlocks[0]);
+
+    //showWeightPoint(*(devidedBlocks[0]));
+
+   /* while (chosenPoint->longestSide > d) {
         int nextToDevideBlockIndex = 0;
         weightPoint *point;
 
@@ -382,11 +405,14 @@ int main()
 
         devidedBlocks = devideBlock(chosenPoint);
 
+        calculateAttributes(devidedBlocks[0]);
+        calculateAttributes(devidedBlocks[1]);
+
         approxFuncArray.push_back(devidedBlocks[0]);
         approxFuncArray.push_back(devidedBlocks[1]);
     }
 
-    showWeightPoint(*chosenPoint);
+    showWeightPoint(*chosenPoint);*/
 
     return 0;
 }
