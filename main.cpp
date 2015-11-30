@@ -44,6 +44,7 @@ struct weightPoint *newWeightPoint ()
     if (retPoint == NULL)
         return NULL;
 
+    retPoint->longestSide = 0;
     return retPoint;
 }
 
@@ -78,14 +79,6 @@ void showPoint(Point selectedPoint)
     cout << "Point y: " << selectedPoint.coordinates[1] << endl;
 }
 
-void showWeightPoint(weightPoint point)
-{
-    showBlockCorners(point);
-    for(int i=0; i<n; i++) {
-        cout << "Dimensional Value" << i <<": " << point.dimensionsValue[i] << endl;
-    }
-    cout << "Longest side: " << point.longestSide << endl;
-}
 void copy_Point(Point *p1, Point *p2)
 {
     for(int i=0; i<n; i++) {
@@ -100,7 +93,70 @@ void copy_weightPoint(weightPoint *p1, weightPoint *p2)
             copy_Point(point, &(p2->blockCorners[i]));
             p1->blockCorners.push_back(*point);
     }
+    p1->longestSide = p2->longestSide;
 }
+
+double einstainSummationSquered(weightPoint value)
+{
+    double sum=0;
+
+    for(int i=0; i<value.dimensionsValue.size();i++) {
+        sum+= (value.dimensionsValue[i]*value.dimensionsValue[i]);
+    }
+
+    return sum;
+}
+
+double einstainSummation(weightPoint value)
+{
+    double sum=1;
+
+    for(int i=0; i<n;i++) {
+        sum+= ((i+1)*abs(value.longestSide)*(value.longestSide));
+    }
+
+    return sum;
+}
+
+double einstainMultiplication(weightPoint value)
+{
+    double result=1;
+
+    for (int i=1; i<=value.dimensionsValue.size(); i++){
+        result = result * cos(value.dimensionsValue.at(i-1)/i);
+    }
+
+    return result;
+}
+
+double evaluationFunction(weightPoint value)
+{
+    return (1/40)*einstainSummationSquered(value)+1-einstainMultiplication(value);
+}
+
+void showElementsOfApproxFunc(weightPoint point)
+{
+    double result = einstainMultiplication(point);
+    cout << "result multiplication: " << result << endl;
+
+    result = einstainSummationSquered(point);
+    cout << "result summation: " << result << endl;
+
+    result = evaluationFunction(point);
+    cout << "result evaluationFunction: " << result << endl;
+}
+
+void showWeightPoint(weightPoint point)
+{
+    showBlockCorners(point);
+    for(int i=0; i<n; i++) {
+        cout << "Dimensional Value" << i <<": " << point.dimensionsValue[i] << endl;
+    }
+    cout << "Longest side: " << point.longestSide << endl;
+    cout << "Approximation function: " << point.approxFunctionValue << endl;
+    showElementsOfApproxFunc(point);
+}
+
 double calculateLongestSide(weightPoint *point)
 {
     double longestDistance = 0;
@@ -120,9 +176,9 @@ double calculateLongestSide(weightPoint *point)
             if(distance1 == distance2) {
                 newDistance = 0;
             }else if ((distance1 <= 0 && distance2 >= 0) || (distance1 >= 0 || distance2 <= 0)){
-                newDistance = abs(distance1) + abs(distance2);
+                newDistance = fabs(distance1) + fabs(distance2);
             } else {
-                newDistance = abs(distance1 - distance2);
+                newDistance = fabs(distance1 - distance2);
             }
 
             if(newDistance>longestDistance) {
@@ -165,6 +221,12 @@ void calculateDimensionValues(weightPoint *point)
     free(beginPoint);
     free(endPoint);
 }
+
+void calculateApproximationFunction(weightPoint *point)
+{
+    point->approxFunctionValue = (evaluationFunction(*point) - (1.5)*sqrt(einstainSummation(*point)));
+}
+
 vector<weightPoint *> devideBlock(weightPoint *point)
 {
     double longestDistance = 0;
@@ -189,13 +251,12 @@ vector<weightPoint *> devideBlock(weightPoint *point)
             if(distance1 == distance2) {
                 newDistance = 0;
             }else if ((distance1 <= 0 && distance2 >= 0) || (distance1 >= 0 || distance2 <= 0)){
-                newDistance = abs(distance1) + abs(distance2);
+                newDistance = fabs(distance1) + fabs(distance2);
             } else {
-                newDistance = abs(distance1 - distance2);
+                newDistance = fabs(distance1 - distance2);
             }
 
-
-            if(newDistance>longestDistance) {
+            if(newDistance > longestDistance) {
 
                 longestDistance = newDistance;
                 longestCornerIndex = i;
@@ -221,10 +282,10 @@ vector<weightPoint *> devideBlock(weightPoint *point)
 
 
 
-    /*cout << "firstDevisionPoint " << endl;
+    cout << "firstDevisionPoint " << endl;
     showPoint(*firstDevisionPoint);
     cout << "secondDevisionPoint " << endl;
-    showPoint(*secondDevisionPoint);*/
+    showPoint(*secondDevisionPoint);
 
     weightPoint *newPoint = newWeightPoint();
     weightPoint *newPoint2 = newWeightPoint();
@@ -250,6 +311,8 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     calculateDimensionValues(newPoint2);
     calculateLongestSide(newPoint);
     calculateLongestSide(newPoint2);
+    calculateApproximationFunction(newPoint);
+    calculateApproximationFunction(newPoint2);
 
     vector<weightPoint *> newBlocks;
     newBlocks.push_back(newPoint);
@@ -264,102 +327,49 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     return newBlocks;
 }
 
-double einstainSummationSquered(weightPoint value)
-{
-    double sum=0;
-
-    for(int i=0; i<value.dimensionsValue.size();i++) {
-        sum+= (value.dimensionsValue[i]*value.dimensionsValue[i]);
-    }
-
-    return sum;
-}
-
-double einstainSummation(weightPoint value)
-{
-    double sum=1;
-
-    for(int i=0; i<n;i++) {
-        sum+= ((i+1)*abs(value.dimensionsValue[i]*2)*(value.dimensionsValue[i]*2));
-    }
-
-    return sum;
-}
-
-double einstainMultiplication(weightPoint value)
-{
-    double result=1;
-
-    for (int i=1; i<=value.dimensionsValue.size(); i++){
-        result = result * cos(value.dimensionsValue.at(i-1)/i);
-    }
-
-    return result;
-}
-
-double evaluationFunction(weightPoint value)
-{
-    return (1/40)*einstainSummationSquered(value)+1-einstainMultiplication(value);
-}
-
-double calculateL(weightPoint xi, weightPoint xj)
-{
-    double newL;
-
-    //newL = (evaluationFunction(xi)-evaluationFunction(xj))/abs();
-    return newL;
-}
-vector<double> approximationFunction(vector<weightPoint *> devidedBlocks)
-{
-    vector<double> result;
-    double L;
-    for(int i=0; i < devidedBlocks.size(); i++){
-        weightPoint value = *(devidedBlocks[i]);
-    //    result.push_back(evaluationFunction(value) - (L/2)*sqrt(einstainSummation(value)));
-    }
-    return result;
-}
-
 int main()
 {
-    weightPoint *examplePoint = newWeightPoint();
     vector<struct Point> points;
 
     Point *point1 = newPoint();
-    point1->coordinates[0] = -40;
+    point1->coordinates[0] = -20;
     point1->coordinates[1] = -40;
     points.push_back(*point1);
     Point *point2 = newPoint();
-    point2->coordinates[0] = 40;
+    point2->coordinates[0] = 20;
     point2->coordinates[1] = -40;
     points.push_back(*point2);
     Point *point3 = newPoint();
-    point3->coordinates[0] = 40;
+    point3->coordinates[0] = 20;
     point3->coordinates[1] = 40;
     points.push_back(*point3);
     Point *point4 = newPoint();
-    point4->coordinates[0] = -40;
+    point4->coordinates[0] = -20;
     point4->coordinates[1] = 40;
     points.push_back(*point4);
 
+    weightPoint *examplePoint = newWeightPoint();
     memcpy(&examplePoint->blockCorners, &points, sizeof(points));
 
 
     vector<weightPoint *> devidedBlocks;
     devidedBlocks = devideBlock(examplePoint);
 
-    showWeightPoint(*(devidedBlocks[0]));
+    /*showWeightPoint(*(devidedBlocks[0]));
     cout << "Second block: " << endl;
     showWeightPoint(*(devidedBlocks[1]));
 
-    double result = einstainMultiplication(*(devidedBlocks[1]));
-    cout << "result multiplication: " << result << endl;
+    devidedBlocks = devideBlock((devidedBlocks[0]));
+    showWeightPoint(*(devidedBlocks[0]));
 
-    result = einstainSummation(*(devidedBlocks[1]));
-    cout << "result summation: " << result << endl;
+    showWeightPoint(*(devidedBlocks[1]));*/
 
-    result = evaluationFunction(*(devidedBlocks[1]));
-    cout << "result evaluationFunction: " << result << endl;
+    weightPoint *chosenPoint = newWeightPoint();
+    double d = 0.0001; //punkt stopu
+
+    while (chosenPoint.longestSide > d;) {
+
+    }
 
     return 0;
 }
