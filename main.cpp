@@ -166,7 +166,7 @@ void showWeightPoint(weightPoint point)
 
 void calculateApproximationFunction(weightPoint *point)
 {
-    point->approxFunctionValue = (evaluationFunction(*point) - (1.5)*sqrt(einstainSummation(*point)));
+    point->approxFunctionValue = (evaluationFunction(*point) - (-0.33)*sqrt(einstainSummation(*point)));
 }
 
 void calculateLongestSide(weightPoint *point)
@@ -175,10 +175,13 @@ void calculateLongestSide(weightPoint *point)
     Point *beginPoint = new Point;
     Point *endPoint = new Point;
 
+    copy_Point(beginPoint, &point->blockCorners[0]);
+    copy_Point(endPoint, &point->blockCorners[1]);
+
     for (int i=0; i<4; i++){
 
-        copy_Point(beginPoint, &point->blockCorners[i]);
-        copy_Point(endPoint, &point->blockCorners[(i+1)%4]);
+        substitute_Point(beginPoint, &point->blockCorners[i]);
+        substitute_Point(endPoint, &point->blockCorners[(i+1)%4]);
 
         for (int j=0; j<2; j++)
         {
@@ -212,9 +215,12 @@ void calculateDimensionValues(weightPoint *point)
     Point *endPoint = new Point;
     double middlePoint;
 
+    copy_Point(beginPoint, &point->blockCorners[0]);
+    copy_Point(endPoint, &point->blockCorners[1]);
+
     for (int i=0; i<n; i++){
-        copy_Point(beginPoint, &point->blockCorners[i]);
-        copy_Point(endPoint, &point->blockCorners[i+1]);
+        substitute_Point(beginPoint, &point->blockCorners[i]);
+        substitute_Point(endPoint, &point->blockCorners[i+1]);
 
         for (int j=0; j<2; j++){
             double distance1 = beginPoint->coordinates[j];
@@ -255,11 +261,18 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     Point *secondPoint = new Point;
     int longestCornerIndex = 0;
 
+    copy_Point(beginPoint, &point->blockCorners[0]); //copy point to declare sizes of vector
+    copy_Point(endPoint, &point->blockCorners[1]);  // after that we use substitute_point to change values of points
+    copy_Point(secondPoint, &point->blockCorners[2]);
+
+    copy_Point(firstDevisionPoint,endPoint);
+    copy_Point(secondDevisionPoint, secondPoint);
+
     for (int i=0; i<4; i++){
 
-        copy_Point(beginPoint, &point->blockCorners[i]);
-        copy_Point(endPoint, &point->blockCorners[(i+1)%4]);
-        copy_Point(secondPoint, &point->blockCorners[(i+2)%4]);
+        substitute_Point(beginPoint, &point->blockCorners[i]);
+        substitute_Point(endPoint, &point->blockCorners[(i+1)%4]);
+        substitute_Point(secondPoint, &point->blockCorners[(i+2)%4]);
 
         for (int j=0; j<2; j++)
         {
@@ -278,7 +291,7 @@ vector<weightPoint *> devideBlock(weightPoint *point)
 
                 longestDistance = newDistance;
                 longestCornerIndex = i;
-                copy_Point(firstDevisionPoint,endPoint);
+                substitute_Point(firstDevisionPoint,endPoint);
 
                 if(firstDevisionPoint->coordinates[j] >= 0) {
                     firstDevisionPoint->coordinates[j] = firstDevisionPoint->coordinates[j]-longestDistance/2;
@@ -286,7 +299,7 @@ vector<weightPoint *> devideBlock(weightPoint *point)
                     firstDevisionPoint->coordinates[j] = firstDevisionPoint->coordinates[j]+longestDistance/2;
                 }
 
-                copy_Point(secondDevisionPoint, secondPoint);
+                substitute_Point(secondDevisionPoint, secondPoint);
 
                 if(secondDevisionPoint->coordinates[j] >=0) {
                     secondDevisionPoint->coordinates[j] = secondDevisionPoint->coordinates[j]-longestDistance/2;
@@ -370,16 +383,14 @@ int main()
 
     chosenPoint = examplePoint;
 
-    //showWeightPoint(*examplePoint);
-
     vector<weightPoint *> devidedBlocks;
     devidedBlocks = devideBlock(chosenPoint);
 
     calculateAttributes(devidedBlocks[0]);
     calculateAttributes(devidedBlocks[1]);
 
-    //approxFuncArray.push_back(devidedBlocks[0]);
-    //approxFuncArray.push_back(devidedBlocks[1]);
+    approxFuncArray.push_back(devidedBlocks[0]);
+    approxFuncArray.push_back(devidedBlocks[1]);
 
     showWeightPoint(*(devidedBlocks[0]));
     showWeightPoint(*(devidedBlocks[1]));
@@ -388,9 +399,13 @@ int main()
 
     double d = 1; //punkt stopu
 
-    //devidedBlocks = devideBlock(devidedBlocks[0]);
+    devidedBlocks = devideBlock(devidedBlocks[0]);
 
-    //showWeightPoint(*(devidedBlocks[0]));
+    calculateAttributes(devidedBlocks[0]);
+    calculateAttributes(devidedBlocks[1]);
+
+    showWeightPoint(*(devidedBlocks[0]));
+    showWeightPoint(*(devidedBlocks[1]));
 
    /* while (chosenPoint->longestSide > d) {
         int nextToDevideBlockIndex = 0;
