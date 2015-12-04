@@ -10,6 +10,12 @@ using namespace std;
 int n = 2;
 int devisionConstant = 2;
 
+int lowerXBounder = -40;
+int higherXBounder = 40;
+
+int lowerYBounder = -40;
+int higherYBounder = 40;
+
 typedef struct Point
 {
     vector<double> coordinates;
@@ -23,31 +29,6 @@ typedef struct weightPoint
     vector<Point> blockCorners;
 }weightPoint;
 
-/*Point *newPoint ()
-{
-    Point *retPoint = (Point *)malloc(sizeof(Point));
-    if (retPoint == NULL)
-        return NULL;
-
-    retPoint->coordinates = (double *)malloc(n*sizeof(double));
-    if (retPoint->coordinates == NULL) {
-        free (retPoint);
-        return NULL;
-    }
-
-    return retPoint;
-}
-*/
-/*weightPoint *newWeightPoint ()
-{
-    weightPoint *retPoint = (weightPoint*)malloc(10000*sizeof(weightPoint));
-    if (retPoint == NULL)
-        return NULL;
-
-    retPoint->longestSide = 0;
-    return retPoint;
-}
-*/
 weightPoint initFunctionDomain()
 {
     weightPoint initialPoint;
@@ -114,6 +95,17 @@ double einstainSummationSquered(weightPoint value)
     return sum;
 }
 
+double einstainSummationSquered(Point value)
+{
+    double sum=0;
+
+    for(int i=0; i<n;i++) {
+        sum+= (value.coordinates[i]*value.coordinates[i]);
+    }
+
+    return sum;
+}
+
 double einstainSummation(weightPoint value)
 {
     double sum=1;
@@ -136,9 +128,25 @@ double einstainMultiplication(weightPoint value)
     return result;
 }
 
+double einstainMultiplication(Point value)
+{
+    double result=1;
+
+    for (int i=1; i<=n; i++){
+        result = result * cos(value.coordinates.at(i-1)/i);
+    }
+
+    return result;
+}
+
 double evaluationFunction(weightPoint value)
 {
-    return (1/40)*einstainSummationSquered(value)+1-einstainMultiplication(value);
+    return (0.025)*einstainSummationSquered(value)+1-einstainMultiplication(value);
+}
+
+double evaluationFunction(Point value)
+{
+    return (0.025)*einstainSummationSquered(value)+1-einstainMultiplication(value);
 }
 
 void showElementsOfApproxFunc(weightPoint point)
@@ -166,7 +174,7 @@ void showWeightPoint(weightPoint point)
 
 void calculateApproximationFunction(weightPoint *point)
 {
-    point->approxFunctionValue = (evaluationFunction(*point) - (-0.33)*sqrt(einstainSummation(*point)));
+    point->approxFunctionValue = (evaluationFunction(*point) - (0.07)*sqrt(einstainSummation(*point)));
 }
 
 void calculateLongestSide(weightPoint *point)
@@ -246,6 +254,48 @@ void calculateDimensionValues(weightPoint *point)
     calculateLongestSide(point);
 }
 
+double calculateDistanceBetweenPoints(Point p1, Point p2)
+{
+    double answer = 0;
+    vector<double> result;
+
+    for(int i=0; i<n; i++) {
+        result.push_back(p1.coordinates[i]-p2.coordinates[i]);
+    }
+
+    for(int i=0; i<n; i++) {
+        answer += result.at(i)*result.at(i);
+    }
+
+    answer = sqrt(answer);
+
+    return answer;
+}
+
+double calculateLipschitzConstant()
+{
+    double answer;
+
+    double r = ((double) rand() / (RAND_MAX));
+
+    Point *point1 = new Point;
+    point1->coordinates.push_back(lowerXBounder+(higherXBounder-lowerXBounder)*r);
+    r = ((double) rand() / (RAND_MAX));
+    point1->coordinates.push_back(lowerYBounder+(higherYBounder-lowerYBounder)*r);
+
+    Point *point2 = new Point;
+    r = ((double) rand() / (RAND_MAX));
+    point2->coordinates.push_back(lowerXBounder+(higherXBounder-lowerXBounder)*r);
+    r = ((double) rand() / (RAND_MAX));
+    point2->coordinates.push_back(lowerYBounder+(higherYBounder-lowerYBounder)*r);
+
+    double functionDiff = evaluationFunction(*point1)-evaluationFunction(*point2);
+    double argDiff = calculateDistanceBetweenPoints(*point1,*point2);
+
+    answer = fabs(functionDiff/argDiff);
+
+    return answer;
+}
 void calculateAttributes(weightPoint *point)
 {
     calculateDimensionValues(point);
@@ -358,19 +408,19 @@ int main()
 
     weightPoint *examplePoint = new weightPoint;
     Point *point1 = new Point;
-    point1->coordinates.push_back(-20);
+    point1->coordinates.push_back(-40);
     point1->coordinates.push_back(-40);
     examplePoint->blockCorners.push_back(*point1);
     Point *point2 = new Point;
-    point2->coordinates.push_back(20);
+    point2->coordinates.push_back(40);
     point2->coordinates.push_back(-40);
     examplePoint->blockCorners.push_back(*point2);
     Point *point3 = new Point;
-    point3->coordinates.push_back(20);
+    point3->coordinates.push_back(40);
     point3->coordinates.push_back(40);
     examplePoint->blockCorners.push_back(*point3);
     Point *point4 = new Point;
-    point4->coordinates.push_back(-20);
+    point4->coordinates.push_back(-40);
     point4->coordinates.push_back(40);
     examplePoint->blockCorners.push_back(*point4);
 
