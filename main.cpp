@@ -30,25 +30,11 @@ typedef struct weightPoint
     vector<Point> blockCorners;
 }weightPoint;
 
-weightPoint initFunctionDomain()
-{
-    weightPoint initialPoint;
-
-    double *initValues = (double *)malloc(n*sizeof(double));
-    for(int i=0; i<n; i++){
-        initValues[i] = 0;
-    }
-    initialPoint.dimensionsValue.assign(initValues, initValues+n);
-
-    return initialPoint;
-
-}
-
 void showBlockCorners(weightPoint weightPoint)
 {
     Point newPoint;
 
-    for(int i=0;i<weightPoint.blockCorners.size();i++){
+    for(int i=0;i<4;i++){
         newPoint = weightPoint.blockCorners[i];
         cout << "weightPoint corner newPoint" << i<< " x: " << newPoint.coordinates[0] << endl;
         cout << "weightPoint corner newPoint" << i << " y: " << newPoint.coordinates[1] << endl;
@@ -63,14 +49,14 @@ void showPoint(Point selectedPoint)
 
 void copy_Point(Point *p1, Point *p2)
 {
-    for(int i=0; i<n; i++) {
+    for(int i=0; i<p2->coordinates.size(); i++) {
         p1->coordinates.push_back(p2->coordinates[i]);
     }
 }
 
 void substitute_Point(Point *p1, Point *p2)
 {
-    for(int i=0; i<n; i++) {
+    for(int i=0; i<p2->coordinates.size(); i++) {
         p1->coordinates[i] = p2->coordinates[i];
     }
 }
@@ -120,7 +106,7 @@ double einstainSummationSquered(Point value)
 {
     double sum=0;
 
-    for(int i=0; i<n;i++) {
+    for(int i=0; i<value.coordinates.size();i++) {
         sum+= (value.coordinates[i]*value.coordinates[i]);
     }
 
@@ -153,7 +139,7 @@ double einstainMultiplication(Point value)
 {
     double result=1;
 
-    for (int i=1; i<=n; i++){
+    for (int i=1; i<=value.coordinates.size(); i++){
         result = result * cos(value.coordinates.at(i-1)/i);
     }
 
@@ -185,7 +171,7 @@ void showElementsOfApproxFunc(weightPoint point)
 void showWeightPoint(weightPoint point)
 {
     showBlockCorners(point);
-    for(int i=0; i<n; i++) {
+    for(int i=0; i<point.dimensionsValue.size(); i++) {
         cout << "Dimensional Value" << i <<": " << point.dimensionsValue[i] << endl;
     }
     cout << "Longest side: " << point.longestSide << endl;
@@ -434,6 +420,8 @@ int main()
     vector<struct Point> points;
 
     weightPoint *examplePoint = new weightPoint;
+    /*
+    //2D
     Point *point1 = new Point;
     point1->coordinates.push_back(-40);
     point1->coordinates.push_back(-40);
@@ -449,7 +437,48 @@ int main()
     Point *point4 = new Point;
     point4->coordinates.push_back(-40);
     point4->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point4);*/
+
+    Point *point1 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point1);
+    Point *point2 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    point2->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point2);
+    Point *point3 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point3);
+    Point *point4 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    point4->coordinates.push_back(40);
     examplePoint->blockCorners.push_back(*point4);
+    Point *point5 = new Point;
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point5);
+    Point *point6 = new Point;
+    point6->coordinates.push_back(40);
+    point6->coordinates.push_back(-40);
+    point6->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point6);
+    Point *point7 = new Point;
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point7);
+    Point *point8 = new Point;
+    point8->coordinates.push_back(-40);
+    point8->coordinates.push_back(40);
+    point8->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point8);
 
     calculateAttributes(examplePoint);
 
@@ -480,7 +509,7 @@ int main()
 
     double minApproxFunction;
 
-    double d = 1; //punkt stopu
+    double d = 0.1; //punkt stopu
     int nextToDevideBlockIndex = 0;
 
     int k=0;
