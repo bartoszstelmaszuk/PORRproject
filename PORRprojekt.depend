@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1449244177 source:c:\users\bartosz\desktop\porrprojekt\main.cpp
+1449256871 source:c:\users\bartosz\desktop\porrprojekt\main.cpp
 	<iostream>
 	<stdlib.h>
 	<math.h>
