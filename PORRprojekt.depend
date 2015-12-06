@@ -7,3 +7,13 @@
 	<stdio.h>
 	<string.h>
 
+1449425531 source:c:\users\bartosz\desktop\porrprojekt\main_parallel.cpp
+	<iostream>
+	<stdlib.h>
+	<math.h>
+	<vector>
+	<stdio.h>
+	<string.h>
+	<ctime>
+	<omp.h>
+
