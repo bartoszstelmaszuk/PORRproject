@@ -10,8 +10,8 @@
 
 using namespace std;
 bool omp = false;        // jesli true to stosujemy przetwarzanie rownolegle; false - sekwencyjne
-int n = 6;              // wymiar
-double d = 0.218798; //punkt stopu
+int n = 3;              // wymiar
+double d = 0.000005; //punkt stopu
 int devisionConstant = 2;
 double L;
 
@@ -469,7 +469,7 @@ int main()
     examplePoint->blockCorners.push_back(*point4);*/
 
     //3D
-    /*
+
     Point *point1 = new Point;
     point1->coordinates.push_back(-40);
     point1->coordinates.push_back(-40);
@@ -510,9 +510,9 @@ int main()
     point8->coordinates.push_back(40);
     point8->coordinates.push_back(-40);
     examplePoint->blockCorners.push_back(*point8);
-*/
 
-    //4D
+
+ /*   //4D
     Point *point1 = new Point;
     point1->coordinates.push_back(-40);
     point1->coordinates.push_back(-40);
@@ -609,7 +609,7 @@ int main()
     point8->coordinates.push_back(40);
     point8->coordinates.push_back(-40);
     point1->coordinates.push_back(-40);
-    examplePoint->blockCorners.push_back(*point16);
+    examplePoint->blockCorners.push_back(*point16);*/
 
     calculateAttributes(examplePoint);
 
@@ -650,6 +650,8 @@ int main()
         if(min > chosenPoint->longestSide){
             min = chosenPoint->longestSide;
             cout << k << " " << chosenPoint->longestSide << endl;
+           // cout << approxFuncArray.size() << endl;
+           // showWeightPoint(*chosenPoint);
         }
         k++;
 
@@ -661,7 +663,7 @@ int main()
         for(int i=0; i<approxFuncArray.size(); i++){
             weightPoint *point = new weightPoint();
             copy_weightPoint(point, approxFuncArray[i]);
-            //cout << "counter: " << i << " " << point->approxFunctionValue << endl;
+           // cout << "counter: " << i << " " << point->approxFunctionValue << endl;
             if(point->approxFunctionValue < minApproxFunction) {
                 minApproxFunction = point->approxFunctionValue;
                 nextToDevideBlockIndex = i;
@@ -673,7 +675,7 @@ int main()
 
         approxFuncArray.erase(approxFuncArray.begin()+nextToDevideBlockIndex);
 
-        //showWeightPoint(*chosenPoint);
+
         devidedBlocks = devideBlock(chosenPoint);
 
         calculateAttributes(devidedBlocks[0]);
@@ -709,14 +711,14 @@ int main()
     delete point6;
     delete point7;
     delete point8;
-    delete point9;
+    /*delete point9;
     delete point10;
     delete point11;
     delete point12;
     delete point13;
     delete point14;
     delete point15;
-    delete point16;
+    delete point16;*/
     delete block1;
     delete block2;
     delete chosenPoint;

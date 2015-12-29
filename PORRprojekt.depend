@@ -17,3 +17,13 @@
 	<ctime>
 	<omp.h>
 
+1450173629 source:/home/bartosz/Desktop/PORRproject/main_parallel.cpp
+	<iostream>
+	<stdlib.h>
+	<math.h>
+	<vector>
+	<stdio.h>
+	<string.h>
+	<ctime>
+	<omp.h>
+
