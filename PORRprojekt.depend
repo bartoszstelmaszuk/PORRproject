@@ -1,7 +1,29 @@
 # depslib dependency file v1.0
-1448561696 source:c:\users\bartosz\desktop\porrprojekt\main.cpp
+1449256871 source:c:\users\bartosz\desktop\porrprojekt\main.cpp
 	<iostream>
 	<stdlib.h>
 	<math.h>
 	<vector>
+	<stdio.h>
+	<string.h>
+
+1449425531 source:c:\users\bartosz\desktop\porrprojekt\main_parallel.cpp
+	<iostream>
+	<stdlib.h>
+	<math.h>
+	<vector>
+	<stdio.h>
+	<string.h>
+	<ctime>
+	<omp.h>
+
+1450173629 source:/home/bartosz/Desktop/PORRproject/main_parallel.cpp
+	<iostream>
+	<stdlib.h>
+	<math.h>
+	<vector>
+	<stdio.h>
+	<string.h>
+	<ctime>
+	<omp.h>
 

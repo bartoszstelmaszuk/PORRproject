@@ -4,10 +4,14 @@
 #include <vector>
 #include <stdio.h>
 #include <string.h>
+#include <ctime>
+#include <omp.h>
+
 
 using namespace std;
-
-int n = 2;
+bool omp = false;        // jesli true to stosujemy przetwarzanie rownolegle; false - sekwencyjne
+int n = 3;              // wymiar
+double d = 0.000005; //punkt stopu
 int devisionConstant = 2;
 double L;
 
@@ -64,14 +68,14 @@ void substitute_Point(Point *p1, Point *p2)
 void copy_weightPoint(weightPoint *p1, weightPoint *p2)
 {
     for(int i=0; i < p2->blockCorners.size() ;i++) {
-            Point *point = new Point;
-            copy_Point(point, &(p2->blockCorners[i]));
-            p1->blockCorners.push_back(*point);
+        Point *point = new Point;
+        copy_Point(point, &(p2->blockCorners[i]));
+        p1->blockCorners.push_back(*point);
     }
     p1->longestSide = p2->longestSide;
     p1->approxFunctionValue = p2->approxFunctionValue;
     for(int i=0; i < p2->dimensionsValue.size() ;i++) {
-            p1->dimensionsValue.push_back(p2->dimensionsValue[i]);
+        p1->dimensionsValue.push_back(p2->dimensionsValue[i]);
     }
 }
 
@@ -80,14 +84,14 @@ void substitute_weightPoint(weightPoint *p1, weightPoint *p2)
     p1->blockCorners.clear();
     p1->dimensionsValue.clear();
     for(int i=0; i < p2->blockCorners.size() ;i++) {
-            Point *point = new Point;
-            copy_Point(point, &(p2->blockCorners[i]));
-            p1->blockCorners.push_back(*point);
+        Point *point = new Point;
+        copy_Point(point, &(p2->blockCorners[i]));
+        p1->blockCorners.push_back(*point);
     }
     p1->longestSide = p2->longestSide;
     p1->approxFunctionValue = p2->approxFunctionValue;
     for(int i=0; i < p2->dimensionsValue.size() ;i++) {
-            p1->dimensionsValue.push_back(p2->dimensionsValue[i]);
+        p1->dimensionsValue.push_back(p2->dimensionsValue[i]);
     }
 }
 
@@ -118,7 +122,7 @@ double einstainSummation(weightPoint value)
     double sum=1;
 
     for(int i=0; i<n;i++) {
-        sum+= ((i+1)*abs(value.longestSide)*(value.longestSide));
+        sum+= ((i+1)*fabs(value.longestSide)*(value.longestSide));
     }
 
     return sum;
@@ -160,7 +164,6 @@ void showElementsOfApproxFunc(weightPoint point)
 {
     /*double result = einstainMultiplication(point);
     cout << "result multiplication: " << result << endl;
-
     result = einstainSummationSquered(point);
     cout << "result summation: " << result << endl;*/
 
@@ -228,7 +231,7 @@ void calculateDimensionValues(weightPoint *point)
 {
     Point *beginPoint = new Point;
     Point *endPoint = new Point;
-    double middlePoint;
+    double middlePoint = 0;
 
     point->dimensionsValue.clear();
 
@@ -303,6 +306,8 @@ double calculateLipschitzConstant()
 
     answer = fabs(functionDiff/argDiff);
 
+    delete point1;
+    delete point2;
     return answer;
 }
 void calculateAttributes(weightPoint *point)
@@ -395,9 +400,32 @@ vector<weightPoint *> devideBlock(weightPoint *point)
         substitute_Point(&(newPoint2->blockCorners[0]), secondDevisionPoint);
     }
 
-    calculateAttributes(newPoint);
-    calculateAttributes(newPoint2);
 
+    // ------------ zrownoleglenie - rozdzial na 2 watki
+    if(omp){
+#pragma omp parallel num_threads(2)
+        {
+            switch(omp_get_thread_num()){
+            case 0:
+                //cout << "thread 0\n";
+                calculateAttributes(newPoint);
+                break;
+            case 1:
+                //cout << "thread 1\n";
+                calculateAttributes(newPoint2);
+                break;
+            default:
+                cout << "ERROR: Thread undefined!";
+                break;
+            }
+        }
+    }
+    //----------
+
+    else{
+        calculateAttributes(newPoint);
+        calculateAttributes(newPoint2);
+    }
     vector<weightPoint *> newBlocks;
     newBlocks.push_back(newPoint);
     newBlocks.push_back(newPoint2);
@@ -413,15 +441,16 @@ vector<weightPoint *> devideBlock(weightPoint *point)
 
 int main()
 {
+    clock_t startTime = clock();    // start time
     L = calculateLipschitzConstant()/2;
-
     cout << "L: " << L << endl;
 
     vector<struct Point> points;
 
     weightPoint *examplePoint = new weightPoint;
-    /*
+
     //2D
+    /*
     Point *point1 = new Point;
     point1->coordinates.push_back(-40);
     point1->coordinates.push_back(-40);
@@ -438,6 +467,8 @@ int main()
     point4->coordinates.push_back(-40);
     point4->coordinates.push_back(40);
     examplePoint->blockCorners.push_back(*point4);*/
+
+    //3D
 
     Point *point1 = new Point;
     point1->coordinates.push_back(-40);
@@ -480,6 +511,106 @@ int main()
     point8->coordinates.push_back(-40);
     examplePoint->blockCorners.push_back(*point8);
 
+
+ /*   //4D
+    Point *point1 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point1);
+    Point *point2 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    point2->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point2);
+    Point *point3 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point3);
+    Point *point4 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    point4->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point4);
+    Point *point5 = new Point;
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point5);
+    Point *point6 = new Point;
+    point6->coordinates.push_back(40);
+    point6->coordinates.push_back(-40);
+    point6->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point6);
+    Point *point7 = new Point;
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point7);
+    Point *point8 = new Point;
+    point8->coordinates.push_back(-40);
+    point8->coordinates.push_back(40);
+    point8->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point8);
+
+    Point *point9 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point9);
+    Point *point10 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    point2->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point10);
+    Point *point11 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point11);
+    Point *point12 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    point4->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point12);
+    Point *point13 = new Point;
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point13);
+    Point *point14 = new Point;
+    point6->coordinates.push_back(40);
+    point6->coordinates.push_back(-40);
+    point6->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point14);
+    Point *point15 = new Point;
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point15);
+    Point *point16 = new Point;
+    point8->coordinates.push_back(-40);
+    point8->coordinates.push_back(40);
+    point8->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point16);*/
+
     calculateAttributes(examplePoint);
 
     showWeightPoint(*examplePoint);
@@ -509,14 +640,19 @@ int main()
 
     double minApproxFunction;
 
-    double d = 0.1; //punkt stopu
+
     int nextToDevideBlockIndex = 0;
 
     int k=0;
-
+    double min = 5;
     while (chosenPoint->longestSide > d) {
         nextToDevideBlockIndex = 0;
-        cout << k << " " << chosenPoint->longestSide << endl;
+        if(min > chosenPoint->longestSide){
+            min = chosenPoint->longestSide;
+            cout << k << " " << chosenPoint->longestSide << endl;
+           // cout << approxFuncArray.size() << endl;
+           // showWeightPoint(*chosenPoint);
+        }
         k++;
 
         weightPoint *point = new weightPoint();
@@ -527,7 +663,7 @@ int main()
         for(int i=0; i<approxFuncArray.size(); i++){
             weightPoint *point = new weightPoint();
             copy_weightPoint(point, approxFuncArray[i]);
-            //cout << "counter: " << i << " " << point->approxFunctionValue << endl;
+           // cout << "counter: " << i << " " << point->approxFunctionValue << endl;
             if(point->approxFunctionValue < minApproxFunction) {
                 minApproxFunction = point->approxFunctionValue;
                 nextToDevideBlockIndex = i;
@@ -539,7 +675,7 @@ int main()
 
         approxFuncArray.erase(approxFuncArray.begin()+nextToDevideBlockIndex);
 
-        //showWeightPoint(*chosenPoint);
+
         devidedBlocks = devideBlock(chosenPoint);
 
         calculateAttributes(devidedBlocks[0]);
@@ -562,6 +698,31 @@ int main()
     }
 
     showWeightPoint(*chosenPoint);
+
+    clock_t endTime = clock();
+    double timeElapsed = (double) (endTime - startTime) / CLOCKS_PER_SEC;
+
+    cout << "Time elapsed: " << timeElapsed << endl;
+    delete point1;
+    delete point2;
+    delete point3;
+    delete point4;
+    delete point5;
+    delete point6;
+    delete point7;
+    delete point8;
+    /*delete point9;
+    delete point10;
+    delete point11;
+    delete point12;
+    delete point13;
+    delete point14;
+    delete point15;
+    delete point16;*/
+    delete block1;
+    delete block2;
+    delete chosenPoint;
+    delete examplePoint;
 
     return 0;
 }
