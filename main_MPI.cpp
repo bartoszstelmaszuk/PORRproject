@@ -11,7 +11,7 @@
 using namespace std;
 
 int n = 3;              // wymiar
-double d = 1.000005; //punkt stopu
+double d = 0.020005; //punkt stopu
 int devisionConstant = 2;
 double L;
 
@@ -434,21 +434,46 @@ void initWeightPoint(weightPoint* p, double (&tab)[8][3]){
         p->blockCorners.push_back(*tmp);
     }
 }
+// for debug
+void showTab(double (&tab)[8][3]){
+    for(int i=0; i<8; ++i){
+        cout << "[" << i << "]\t";
+        for(int j=0; j<3; ++j){
+            cout << tab[i][j] << "\t";
+        }
+        cout << endl;
+    }
+}
+
+// DO WERYFIKACJI POPRAWNOSC OBLICZEN
 // niech tab1 - tablica dobra dalej dzielona
-void updateBounds(double (&tab1)[8][3], double (&tab2)[8][3], double& dist1, double& dist2){
+void updateBounds(double (&tabToDevide)[8][3], double (&tab2)[8][3]){
+    // wartosci min i max
+    double min = tabToDevide[0][1], max = tabToDevide[2][1];
+    double distance = fabs(min - max);
+    // przepisz tablice dzielona do drugiej tablicy
     for(int i=0; i<8; ++i){
         for(int j=0; j<3; ++j){
-            tab2[i][j] = 0.4*tab1[i][j];
-            tab1[i][j] = 0.6*tab1[i][j];
+            tab2[i][j] = tabToDevide[i][j];
         }
     }
+    // zaktualizuj odpowiednie punkty obu tablic -> wspolrzedne y
+    tabToDevide[2][1] -= distance/2;
+    tabToDevide[3][1] -= distance/2;
+    tabToDevide[6][1] -= distance/2;
+    tabToDevide[7][1] -= distance/2;
+
+    tab2[0][1] += distance/2;
+    tab2[1][1] += distance/2;
+    tab2[4][1] += distance/2;
+    tab2[5][1] += distance/2;
 }
 
 int main(int argc, char* argv[])
 {
     // zmienne dla MPI
     MPI_Status status;
-    const int dest = 0, source = 1, tagApprox = 4, tagSide = 5, tagGoOn = 6;
+    const int tagApprox = 4, tagSide = 5, tagGoOn = 6;
     const int RANK_MASTER = 0, RANK_SLAVE = 1;
 
     //clock_t startTime = clock();    // start time
@@ -480,19 +505,16 @@ int main(int argc, char* argv[])
         {40, 40, -40},
         {-40, 40, -40}
     };
-    // roznica miedzy min i max wspolrzedna y dla tab1 i tab2
-    double dist1 = 50.0,
-            dist2 = 30.0;
+
     int rank = 0, numberProc = 0;
     double endCondition = 100.0;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numberProc);
-
-
-    while (endCondition > d) {
-
-
+    int kon = 0;
+    while (kon < 3) {
+        ++kon;
+        //while (endCondition > d) {
         //showWeightPoint(*examplePoint1);
         //showWeightPoint(*examplePoint2);
         if(rank == 0){
@@ -502,6 +524,8 @@ int main(int argc, char* argv[])
             // porownuje ktory przedzial lepszy (gdzie approx jest mniejsze)
             // odpala metode update'ujaca przedzialy
             // i wszystko znowu sie mieli od nowa dla nowych tab1 i tab2
+            //cout << "TAB1\n";
+            //showTab(tab1);
             initWeightPoint(examplePoint1, tab1);
             calculateAttributes(examplePoint1);
             vector<weightPoint *> approxFuncArray;
@@ -510,17 +534,14 @@ int main(int argc, char* argv[])
             devidedBlocks = devideBlock(examplePoint1);
 
             weightPoint *block1 = new weightPoint();
-            copy_weightPoint(block1, devidedBlocks[0]);
-
             weightPoint *block2 = new weightPoint();
+            weightPoint *chosenPoint = new weightPoint();
+            copy_weightPoint(block1, devidedBlocks[0]);
             copy_weightPoint(block2, devidedBlocks[1]);
-
             calculateAttributes(block1);
             calculateAttributes(block2);
-
             approxFuncArray.push_back(block1);
             approxFuncArray.push_back(block2);
-            weightPoint *chosenPoint = new weightPoint();
             copy_weightPoint(chosenPoint, block2);
             double minApproxFunction = 0.0;
             int nextToDevideBlockIndex = 0;
@@ -528,7 +549,7 @@ int main(int argc, char* argv[])
             int counter = 0;
 
             //while (chosenPoint->longestSide > d) {
-            while(counter < 100){
+            while(counter < 10){
                 clearWeightPointVec(devidedBlocks);
                 nextToDevideBlockIndex = 0;
                 if(min > chosenPoint->longestSide){
@@ -556,8 +577,8 @@ int main(int argc, char* argv[])
                 calculateAttributes(devidedBlocks[0]);
                 calculateAttributes(devidedBlocks[1]);
                 weightPoint *block1 = new weightPoint();
-                copy_weightPoint(block1, devidedBlocks[0]);
                 weightPoint *block2 = new weightPoint();
+                copy_weightPoint(block1, devidedBlocks[0]);
                 copy_weightPoint(block2, devidedBlocks[1]);
                 approxFuncArray.push_back(block1);
                 approxFuncArray.push_back(block2);
@@ -570,14 +591,15 @@ int main(int argc, char* argv[])
             MPI_Recv(&approxFunctionValueReceived, 1, MPI_DOUBLE, RANK_SLAVE, tagApprox, MPI_COMM_WORLD, &status);
             MPI_Recv(&longestSideReceived, 1, MPI_DOUBLE, RANK_SLAVE, tagSide, MPI_COMM_WORLD, &status);
             cout << "ODEBRALEM: " << approxFunctionValueReceived << " " << longestSideReceived << endl;
-            // i porownaj
+            // i porownaj - najpierw sprawdz warunek zakonczenia - moze nie ma co dalej dzielic dziedziny
+
             if(approxFunctionValueReceived < chosenPoint->approxFunctionValue){   // czyli tab2 bylo lepsze
-                updateBounds(tab2, tab1, dist1, dist2);
+                updateBounds(tab2, tab1);
                 endCondition = longestSideReceived;
                 cout << "USTAWIAM END CONDITION1: " << endCondition;
             }
             else{
-                updateBounds(tab1, tab2, dist1, dist2);
+                updateBounds(tab1, tab2);
                 endCondition = chosenPoint->longestSide;
                 cout << "\tUSTAWIAM END CONDITION2: " << endCondition << endl;
             }
@@ -597,6 +619,8 @@ int main(int argc, char* argv[])
         }
 
         else{
+            cout << "TAB2\n";
+            showTab(tab2);
             cout << "Process RANK = 1\n liczeeee\n";
             initWeightPoint(examplePoint2, tab2);
             calculateAttributes(examplePoint2);
@@ -607,18 +631,15 @@ int main(int argc, char* argv[])
             devidedBlocks = devideBlock(examplePoint2);
 
             weightPoint *block1 = new weightPoint();
-            copy_weightPoint(block1, devidedBlocks[0]);
-
             weightPoint *block2 = new weightPoint();
+            weightPoint *chosenPoint = new weightPoint();
+            copy_weightPoint(block1, devidedBlocks[0]);
             copy_weightPoint(block2, devidedBlocks[1]);
-
             calculateAttributes(block1);
             calculateAttributes(block2);
-
             approxFuncArray.push_back(block1);
             approxFuncArray.push_back(block2);
 
-            weightPoint *chosenPoint = new weightPoint();
             copy_weightPoint(chosenPoint, block2);
 
             double minApproxFunction = 0.0;
@@ -626,7 +647,7 @@ int main(int argc, char* argv[])
             double min = 5;
             int counter = 0;
             //while (chosenPoint->longestSide > d) {
-            while(counter < 100){
+            while(counter < 10){
                 clearWeightPointVec(devidedBlocks);
                 nextToDevideBlockIndex = 0;
                 if(min > chosenPoint->longestSide){
@@ -659,11 +680,9 @@ int main(int argc, char* argv[])
                 calculateAttributes(devidedBlocks[1]);
 
                 weightPoint *block1 = new weightPoint();
-                copy_weightPoint(block1, devidedBlocks[0]);
-
                 weightPoint *block2 = new weightPoint();
+                copy_weightPoint(block1, devidedBlocks[0]);
                 copy_weightPoint(block2, devidedBlocks[1]);
-
                 approxFuncArray.push_back(block1);
                 approxFuncArray.push_back(block2);
 
@@ -705,6 +724,7 @@ int main(int argc, char* argv[])
             endCondition = chosenPoint->longestSide;
             // wait for new data to continue computations
             MPI_Recv(&tab2, 24, MPI_DOUBLE, RANK_MASTER, tagGoOn, MPI_COMM_WORLD, &status);
+
         }
     }
 

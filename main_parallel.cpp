@@ -5,13 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctime>
-#include "mpi.h"
+#include <omp.h>
 
 
 using namespace std;
-
+bool omp = false;        // jesli true to stosujemy przetwarzanie rownolegle; false - sekwencyjne
 int n = 3;              // wymiar
-double d = 0.020005; //punkt stopu
+double d = 0.000005; //punkt stopu
 int devisionConstant = 2;
 double L;
 
@@ -401,9 +401,31 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     }
 
 
-    calculateAttributes(newPoint);
-    calculateAttributes(newPoint2);
+    // ------------ zrownoleglenie - rozdzial na 2 watki
+    if(omp){
+#pragma omp parallel num_threads(2)
+        {
+            switch(omp_get_thread_num()){
+            case 0:
+                //cout << "thread 0\n";
+                calculateAttributes(newPoint);
+                break;
+            case 1:
+                //cout << "thread 1\n";
+                calculateAttributes(newPoint2);
+                break;
+            default:
+                cout << "ERROR: Thread undefined!";
+                break;
+            }
+        }
+    }
+    //----------
 
+    else{
+        calculateAttributes(newPoint);
+        calculateAttributes(newPoint2);
+    }
     vector<weightPoint *> newBlocks;
     newBlocks.push_back(newPoint);
     newBlocks.push_back(newPoint2);
@@ -417,321 +439,289 @@ vector<weightPoint *> devideBlock(weightPoint *point)
     return newBlocks;
 }
 
-void clearWeightPointVec(std::vector<weightPoint*>& vec){
-
-    for(std::vector<weightPoint*>::iterator it = vec.begin(); it != vec.end(); ++it){
-        delete (*it);
-    }
-    vec.clear();
-}
-
-void initWeightPoint(weightPoint* p, double (&tab)[8][3]){
-    for(int i=0; i<8; ++i){
-        Point *tmp = new Point;
-        for(int j=0; j<3; ++j){
-            tmp->coordinates.push_back(tab[i][j]);
-        }
-        p->blockCorners.push_back(*tmp);
-    }
-}
-// for debug
-void showTab(double (&tab)[8][3]){
-    for(int i=0; i<8; ++i){
-        cout << "[" << i << "]\t";
-        for(int j=0; j<3; ++j){
-            cout << tab[i][j] << "\t";
-        }
-        cout << endl;
-    }
-}
-
-// DO WERYFIKACJI POPRAWNOSC OBLICZEN
-// niech tab1 - tablica dobra dalej dzielona
-void updateBounds(double (&tabToDevide)[8][3], double (&tab2)[8][3]){
-    // wartosci min i max
-    double min = tabToDevide[0][1], max = tabToDevide[2][1];
-    double distance = fabs(min - max);
-    // przepisz tablice dzielona do drugiej tablicy
-    for(int i=0; i<8; ++i){
-        for(int j=0; j<3; ++j){
-            tab2[i][j] = tabToDevide[i][j];
-        }
-    }
-    // zaktualizuj odpowiednie punkty obu tablic -> wspolrzedne y
-    tabToDevide[2][1] -= distance/2;
-    tabToDevide[3][1] -= distance/2;
-    tabToDevide[6][1] -= distance/2;
-    tabToDevide[7][1] -= distance/2;
-
-    tab2[0][1] += distance/2;
-    tab2[1][1] += distance/2;
-    tab2[4][1] += distance/2;
-    tab2[5][1] += distance/2;
-}
-
-int main(int argc, char* argv[])
+int main()
 {
-    // zmienne dla MPI
-    MPI_Status status;
-    const int tagApprox = 4, tagSide = 5, tagGoOn = 6;
-    const int RANK_MASTER = 0, RANK_SLAVE = 1;
-
-    //clock_t startTime = clock();    // start time
+    clock_t startTime = clock();    // start time
     L = calculateLipschitzConstant()/2;
     cout << "L: " << L << endl;
 
-    weightPoint *examplePoint1 = new weightPoint;
-    weightPoint *examplePoint2 = new weightPoint;
+    vector<struct Point> points;
 
-    // tablice int przechowujace aktualne wspolrzedne blokow (wersja dla 3D) - 8 punktow po 3 wspolrzedne
-    double tab1[8][3] = {
-        {-40, -40, 40},
-        {40, -40, 40},
-        {40, 10, 40},
-        {-40, 10, 40},
-        {-40, -40, 10},
-        {40, -40, 10},
-        {40, 10, 10},
-        {-40, 10, 10}
-    };
+    weightPoint *examplePoint = new weightPoint;
 
-    double tab2[8][3] = {
-        {-40, 10, 10},
-        {40, 10, 10},
-        {40, 40, 10},
-        {-40, 40, 10},
-        {-40, 10, -40},
-        {40, 10, -40},
-        {40, 40, -40},
-        {-40, 40, -40}
-    };
+    //2D
+    /*
+    Point *point1 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point1);
+    Point *point2 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point2);
+    Point *point3 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point3);
+    Point *point4 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point4);*/
 
-    int rank = 0, numberProc = 0;
-    double endCondition = 100.0;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &numberProc);
-    int kon = 0;
-    while (kon < 3) {
-        ++kon;
-        //while (endCondition > d) {
-        //showWeightPoint(*examplePoint1);
-        //showWeightPoint(*examplePoint2);
-        if(rank == 0){
-            cout << "Process RANK = 0\n nic nie robieeee\n";
-            // mieli dla pkt 1
-            // czeka na wynik z drugiego procesu
-            // porownuje ktory przedzial lepszy (gdzie approx jest mniejsze)
-            // odpala metode update'ujaca przedzialy
-            // i wszystko znowu sie mieli od nowa dla nowych tab1 i tab2
-            //cout << "TAB1\n";
-            //showTab(tab1);
-            initWeightPoint(examplePoint1, tab1);
-            calculateAttributes(examplePoint1);
-            vector<weightPoint *> approxFuncArray;
-            vector<weightPoint *> devidedBlocks;
+    //3D
 
-            devidedBlocks = devideBlock(examplePoint1);
+    Point *point1 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point1);
+    Point *point2 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    point2->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point2);
+    Point *point3 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point3);
+    Point *point4 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    point4->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point4);
+    Point *point5 = new Point;
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point5);
+    Point *point6 = new Point;
+    point6->coordinates.push_back(40);
+    point6->coordinates.push_back(-40);
+    point6->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point6);
+    Point *point7 = new Point;
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point7);
+    Point *point8 = new Point;
+    point8->coordinates.push_back(-40);
+    point8->coordinates.push_back(40);
+    point8->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point8);
 
-            weightPoint *block1 = new weightPoint();
-            weightPoint *block2 = new weightPoint();
-            weightPoint *chosenPoint = new weightPoint();
-            copy_weightPoint(block1, devidedBlocks[0]);
-            copy_weightPoint(block2, devidedBlocks[1]);
-            calculateAttributes(block1);
-            calculateAttributes(block2);
-            approxFuncArray.push_back(block1);
-            approxFuncArray.push_back(block2);
-            copy_weightPoint(chosenPoint, block2);
-            double minApproxFunction = 0.0;
-            int nextToDevideBlockIndex = 0;
-            double min = 5;
-            int counter = 0;
 
-            //while (chosenPoint->longestSide > d) {
-            while(counter < 10){
-                clearWeightPointVec(devidedBlocks);
-                nextToDevideBlockIndex = 0;
-                if(min > chosenPoint->longestSide){
-                    min = chosenPoint->longestSide;
-                }
+ /*   //4D
+    Point *point1 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point1);
+    Point *point2 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    point2->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point2);
+    Point *point3 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point3);
+    Point *point4 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    point4->coordinates.push_back(40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point4);
+    Point *point5 = new Point;
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point5);
+    Point *point6 = new Point;
+    point6->coordinates.push_back(40);
+    point6->coordinates.push_back(-40);
+    point6->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point6);
+    Point *point7 = new Point;
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point7);
+    Point *point8 = new Point;
+    point8->coordinates.push_back(-40);
+    point8->coordinates.push_back(40);
+    point8->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    examplePoint->blockCorners.push_back(*point8);
+    Point *point9 = new Point;
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    point1->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point9);
+    Point *point10 = new Point;
+    point2->coordinates.push_back(40);
+    point2->coordinates.push_back(-40);
+    point2->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point10);
+    Point *point11 = new Point;
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point3->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point11);
+    Point *point12 = new Point;
+    point4->coordinates.push_back(-40);
+    point4->coordinates.push_back(40);
+    point4->coordinates.push_back(40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point12);
+    Point *point13 = new Point;
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point5->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point13);
+    Point *point14 = new Point;
+    point6->coordinates.push_back(40);
+    point6->coordinates.push_back(-40);
+    point6->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point14);
+    Point *point15 = new Point;
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(40);
+    point7->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point15);
+    Point *point16 = new Point;
+    point8->coordinates.push_back(-40);
+    point8->coordinates.push_back(40);
+    point8->coordinates.push_back(-40);
+    point1->coordinates.push_back(-40);
+    examplePoint->blockCorners.push_back(*point16);*/
 
-                weightPoint *point = new weightPoint();
-                copy_weightPoint(point, approxFuncArray[0]);
+    calculateAttributes(examplePoint);
+
+    showWeightPoint(*examplePoint);
+
+    vector<weightPoint *> approxFuncArray;
+
+    vector<weightPoint *> devidedBlocks;
+    devidedBlocks = devideBlock(examplePoint);
+
+    weightPoint *block1 = new weightPoint();
+    copy_weightPoint(block1, devidedBlocks[0]);
+
+    weightPoint *block2 = new weightPoint();
+    copy_weightPoint(block2, devidedBlocks[1]);
+
+    calculateAttributes(block1);
+    calculateAttributes(block2);
+
+    approxFuncArray.push_back(block1);
+    approxFuncArray.push_back(block2);
+
+    //showWeightPoint(*(approxFuncArray[0]));
+    //showWeightPoint(*(approxFuncArray[1]));
+
+    weightPoint *chosenPoint = new weightPoint();
+    copy_weightPoint(chosenPoint, block2);
+
+    double minApproxFunction;
+
+
+    int nextToDevideBlockIndex = 0;
+
+    int k=0;
+    double min = 5;
+    while (chosenPoint->longestSide > d) {
+        nextToDevideBlockIndex = 0;
+        if(min > chosenPoint->longestSide){
+            min = chosenPoint->longestSide;
+            cout << k << " " << chosenPoint->longestSide << endl;
+           // cout << approxFuncArray.size() << endl;
+           // showWeightPoint(*chosenPoint);
+        }
+        k++;
+
+        weightPoint *point = new weightPoint();
+        copy_weightPoint(point, approxFuncArray[0]);
+        minApproxFunction = point->approxFunctionValue;
+        delete point;
+
+        for(int i=0; i<approxFuncArray.size(); i++){
+            weightPoint *point = new weightPoint();
+            copy_weightPoint(point, approxFuncArray[i]);
+           // cout << "counter: " << i << " " << point->approxFunctionValue << endl;
+            if(point->approxFunctionValue < minApproxFunction) {
                 minApproxFunction = point->approxFunctionValue;
-                delete point;
-
-                for(int i=0; i<approxFuncArray.size(); i++){
-                    weightPoint *point = new weightPoint();
-                    copy_weightPoint(point, approxFuncArray[i]);
-                    // cout << "counter: " << i << " " << point->approxFunctionValue << endl;
-                    if(point->approxFunctionValue < minApproxFunction) {
-                        minApproxFunction = point->approxFunctionValue;
-                        nextToDevideBlockIndex = i;
-                    }
-                    delete point;
-                }
-                substitute_weightPoint(chosenPoint, approxFuncArray[nextToDevideBlockIndex]);
-                approxFuncArray.erase(approxFuncArray.begin()+nextToDevideBlockIndex);
-                devidedBlocks = devideBlock(chosenPoint);
-                calculateAttributes(devidedBlocks[0]);
-                calculateAttributes(devidedBlocks[1]);
-                weightPoint *block1 = new weightPoint();
-                weightPoint *block2 = new weightPoint();
-                copy_weightPoint(block1, devidedBlocks[0]);
-                copy_weightPoint(block2, devidedBlocks[1]);
-                approxFuncArray.push_back(block1);
-                approxFuncArray.push_back(block2);
-                counter++;
+                nextToDevideBlockIndex = i;
             }
-            cout << "RANK = 0 DONE!\n ";
-            double approxFunctionValueReceived = 0.0,
-                    longestSideReceived = 0.0;
-            // odbierz
-            MPI_Recv(&approxFunctionValueReceived, 1, MPI_DOUBLE, RANK_SLAVE, tagApprox, MPI_COMM_WORLD, &status);
-            MPI_Recv(&longestSideReceived, 1, MPI_DOUBLE, RANK_SLAVE, tagSide, MPI_COMM_WORLD, &status);
-            cout << "ODEBRALEM: " << approxFunctionValueReceived << " " << longestSideReceived << endl;
-            // i porownaj - najpierw sprawdz warunek zakonczenia - moze nie ma co dalej dzielic dziedziny
-
-            if(approxFunctionValueReceived < chosenPoint->approxFunctionValue){   // czyli tab2 bylo lepsze
-                updateBounds(tab2, tab1);
-                endCondition = longestSideReceived;
-                cout << "USTAWIAM END CONDITION1: " << endCondition;
-            }
-            else{
-                updateBounds(tab1, tab2);
-                endCondition = chosenPoint->longestSide;
-                cout << "\tUSTAWIAM END CONDITION2: " << endCondition << endl;
-            }
-            // po updacie trzeba wyslac nowa tablice do drugiego procesu
-            MPI_Send(&(tab2[0][0]), 24, MPI_DOUBLE, RANK_SLAVE, tagGoOn, MPI_COMM_WORLD );
-
-            //showWeightPoint(*chosenPoint);
-            delete block1;
-            delete block2;
-
-            // send signal that computations can be continued
-            // MPI_Send(&CALC_ON, 1, MPI_INT, dest, tagGoOn, MPI_COMM_WORLD );
-
-            /*delete chosenPoint;
-            clearWeightPointVec(approxFuncArray);
-            clearWeightPointVec(devidedBlocks);*/
+            delete point;
         }
 
-        else{
-            cout << "TAB2\n";
-            showTab(tab2);
-            cout << "Process RANK = 1\n liczeeee\n";
-            initWeightPoint(examplePoint2, tab2);
-            calculateAttributes(examplePoint2);
+        substitute_weightPoint(chosenPoint, approxFuncArray[nextToDevideBlockIndex]);
 
-            vector<weightPoint *> approxFuncArray;
-            vector<weightPoint *> devidedBlocks;
+        approxFuncArray.erase(approxFuncArray.begin()+nextToDevideBlockIndex);
 
-            devidedBlocks = devideBlock(examplePoint2);
 
-            weightPoint *block1 = new weightPoint();
-            weightPoint *block2 = new weightPoint();
-            weightPoint *chosenPoint = new weightPoint();
-            copy_weightPoint(block1, devidedBlocks[0]);
-            copy_weightPoint(block2, devidedBlocks[1]);
-            calculateAttributes(block1);
-            calculateAttributes(block2);
-            approxFuncArray.push_back(block1);
-            approxFuncArray.push_back(block2);
+        devidedBlocks = devideBlock(chosenPoint);
 
-            copy_weightPoint(chosenPoint, block2);
+        calculateAttributes(devidedBlocks[0]);
+        calculateAttributes(devidedBlocks[1]);
 
-            double minApproxFunction = 0.0;
-            int nextToDevideBlockIndex = 0;
-            double min = 5;
-            int counter = 0;
-            //while (chosenPoint->longestSide > d) {
-            while(counter < 10){
-                clearWeightPointVec(devidedBlocks);
-                nextToDevideBlockIndex = 0;
-                if(min > chosenPoint->longestSide){
-                    min = chosenPoint->longestSide;
-                }
+        weightPoint *block1 = new weightPoint();
+        copy_weightPoint(block1, devidedBlocks[0]);
 
-                weightPoint *point = new weightPoint();
-                copy_weightPoint(point, approxFuncArray[0]);
-                minApproxFunction = point->approxFunctionValue;
-                delete point;
+        weightPoint *block2 = new weightPoint();
+        copy_weightPoint(block2, devidedBlocks[1]);
 
-                for(int i=0; i<approxFuncArray.size(); i++){
-                    weightPoint *point = new weightPoint();
-                    copy_weightPoint(point, approxFuncArray[i]);
-                    // cout << "counter: " << i << " " << point->approxFunctionValue << endl;
-                    if(point->approxFunctionValue < minApproxFunction) {
-                        minApproxFunction = point->approxFunctionValue;
-                        nextToDevideBlockIndex = i;
-                    }
-                    delete point;
-                }
+        approxFuncArray.push_back(block1);
+        approxFuncArray.push_back(block2);
 
-                substitute_weightPoint(chosenPoint, approxFuncArray[nextToDevideBlockIndex]);
-
-                approxFuncArray.erase(approxFuncArray.begin()+nextToDevideBlockIndex);
-
-                devidedBlocks = devideBlock(chosenPoint);
-
-                calculateAttributes(devidedBlocks[0]);
-                calculateAttributes(devidedBlocks[1]);
-
-                weightPoint *block1 = new weightPoint();
-                weightPoint *block2 = new weightPoint();
-                copy_weightPoint(block1, devidedBlocks[0]);
-                copy_weightPoint(block2, devidedBlocks[1]);
-                approxFuncArray.push_back(block1);
-                approxFuncArray.push_back(block2);
-
-                counter++;
-            }
-            cout << "RANK = 1 DONE!\n ";
-            double temp = chosenPoint->approxFunctionValue;
-            double temp2 = chosenPoint->longestSide;
-            cout << "WYSYLAM: " << temp << " " << temp2 << endl;
-            MPI_Send(&temp, 1, MPI_DOUBLE, RANK_MASTER, tagApprox, MPI_COMM_WORLD);
-            MPI_Send(&temp2, 1, MPI_DOUBLE, RANK_MASTER, tagSide, MPI_COMM_WORLD);
-            //showWeightPoint(*chosenPoint);
-            /*
-            clock_t endTime = clock();
-            double timeElapsed = (double) (endTime - startTime) / CLOCKS_PER_SEC;
-
-            cout << "Time elapsed: " << timeElapsed << endl;*/
-            /* delete point1;
-        delete point2;
-        delete point3;
-        delete point4;
-        delete point5;
-        delete point6;
-        delete point7;
-        delete point8;*/
-            /*delete point9;
-        delete point10;
-        delete point11;
-        delete point12;
-        delete point13;
-        delete point14;
-        delete point15;
-        delete point16;*/
-            //delete block1;
-            //delete block2;
-            delete chosenPoint;
-            clearWeightPointVec(approxFuncArray);
-            clearWeightPointVec(devidedBlocks);
-            endCondition = chosenPoint->longestSide;
-            // wait for new data to continue computations
-            MPI_Recv(&tab2, 24, MPI_DOUBLE, RANK_MASTER, tagGoOn, MPI_COMM_WORLD, &status);
-
+        /*for (int l=0; l<approxFuncArray.size(); l++){
+            showWeightPoint(*(approxFuncArray[l]));
         }
+        showWeightPoint(*(devidedBlocks[0]));
+        showWeightPoint(*(devidedBlocks[1]));*/
     }
 
-    MPI_Finalize();
+    showWeightPoint(*chosenPoint);
 
-    delete examplePoint1;
-    delete examplePoint2;
+    clock_t endTime = clock();
+    double timeElapsed = (double) (endTime - startTime) / CLOCKS_PER_SEC;
+
+    cout << "Time elapsed: " << timeElapsed << endl;
+    delete point1;
+    delete point2;
+    delete point3;
+    delete point4;
+    delete point5;
+    delete point6;
+    delete point7;
+    delete point8;
+    /*delete point9;
+    delete point10;
+    delete point11;
+    delete point12;
+    delete point13;
+    delete point14;
+    delete point15;
+    delete point16;*/
+    delete block1;
+    delete block2;
+    delete chosenPoint;
+    delete examplePoint;
+
     return 0;
 }
-
