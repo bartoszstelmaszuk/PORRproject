@@ -445,6 +445,20 @@ void showTab(double (&tab)[8][3]){
     }
 }
 
+void showTab(double (&tab1)[8][3], double (&tab2)[8][3]){
+    for(int i=0; i<8; ++i){
+        cout << "[" << i << "]\t";
+        for(int j=0; j<3; ++j){
+            cout << tab1[i][j] << "\t";
+        }
+        cout << "\t|\t";
+        for(int j=0; j<3; ++j){
+            cout << tab2[i][j] << "\t";
+        }
+        cout << endl;
+    }
+}
+
 // DO WERYFIKACJI POPRAWNOSC OBLICZEN
 // niech tab1 - tablica dobra dalej dzielona
 void updateBounds(double (&tabToDevide)[8][3], double (&tab2)[8][3]){
@@ -473,7 +487,7 @@ int main(int argc, char* argv[])
 {
     // zmienne dla MPI
     MPI_Status status;
-    const int tagApprox = 4, tagSide = 5, tagGoOn = 6;
+    const int tagApprox = 4, tagSide = 5, tagGoOn = 6, tagEndCondition = 7;
     const int RANK_MASTER = 0, RANK_SLAVE = 1;
 
     //clock_t startTime = clock();    // start time
@@ -512,12 +526,13 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numberProc);
     int kon = 0;
-    while (kon < 3) {
+    while (kon < 50) {
         ++kon;
         //while (endCondition > d) {
         //showWeightPoint(*examplePoint1);
         //showWeightPoint(*examplePoint2);
         if(rank == 0){
+            //showTab(tab1, tab2);
             cout << "Process RANK = 0\n nic nie robieeee\n";
             // mieli dla pkt 1
             // czeka na wynik z drugiego procesu
@@ -603,6 +618,10 @@ int main(int argc, char* argv[])
                 endCondition = chosenPoint->longestSide;
                 cout << "\tUSTAWIAM END CONDITION2: " << endCondition << endl;
             }
+            MPI_Send(&endCondition, 1, MPI_DOUBLE, RANK_SLAVE, tagEndCondition, MPI_COMM_WORLD);
+            if(endCondition < d){
+                break;
+            }
             // po updacie trzeba wyslac nowa tablice do drugiego procesu
             MPI_Send(&(tab2[0][0]), 24, MPI_DOUBLE, RANK_SLAVE, tagGoOn, MPI_COMM_WORLD );
 
@@ -610,16 +629,13 @@ int main(int argc, char* argv[])
             delete block1;
             delete block2;
 
-            // send signal that computations can be continued
-            // MPI_Send(&CALC_ON, 1, MPI_INT, dest, tagGoOn, MPI_COMM_WORLD );
-
             /*delete chosenPoint;
             clearWeightPointVec(approxFuncArray);
             clearWeightPointVec(devidedBlocks);*/
         }
 
         else{
-            cout << "TAB2\n";
+            //cout << "TAB2\n";
             showTab(tab2);
             cout << "Process RANK = 1\n liczeeee\n";
             initWeightPoint(examplePoint2, tab2);
@@ -721,8 +737,12 @@ int main(int argc, char* argv[])
             delete chosenPoint;
             clearWeightPointVec(approxFuncArray);
             clearWeightPointVec(devidedBlocks);
-            endCondition = chosenPoint->longestSide;
+            //endCondition = chosenPoint->longestSide;
             // wait for new data to continue computations
+            MPI_Recv(&endCondition, 1, MPI_DOUBLE, RANK_MASTER, tagEndCondition, MPI_COMM_WORLD, &status);
+            if(endCondition < d){
+                break;
+            }
             MPI_Recv(&tab2, 24, MPI_DOUBLE, RANK_MASTER, tagGoOn, MPI_COMM_WORLD, &status);
 
         }
@@ -734,3 +754,4 @@ int main(int argc, char* argv[])
     delete examplePoint2;
     return 0;
 }
+
